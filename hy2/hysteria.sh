@@ -475,17 +475,20 @@ changeport(){
 }
 
 changepasswd(){
-    oldpasswd=$(cat /etc/hysteria/config.yaml 2>/dev/null | sed -n 15p | awk '{print $2}')
-
+    oldpasswd=$(grep -oP 'password: \K.*' /etc/hysteria/config.yaml)
     read -p "设置 Hysteria 2 密码（回车跳过为随机字符）：" passwd
     [[ -z $passwd ]] && passwd=$(date +%s%N | md5sum | cut -c 1-8)
-
-    sed -i "15s#$oldpasswd#$passwd#g" /etc/hysteria/config.yaml
-    sed -i "2s#$oldpasswd#$passwd#g" /root/hy/hy-client.yaml
-    sed -i "3s#$oldpasswd#$passwd#g" /root/hy/hy-client.json
-
+    
+    # 替换服务端配置文件
+    sed -i "s/password: $oldpasswd/password: $passwd/" /etc/hysteria/config.yaml
+    
+    # 替换客户端YAML配置
+    sed -i "s/auth: $oldpasswd/auth: $passwd/" /root/hy/hy-client.yaml
+    
+    # 替换客户端JSON配置
+    sed -i "s/\"password\": \"$oldpasswd\"/\"password\": \"$passwd\"/" /root/hy/hy-client.json
+    
     stophysteria && starthysteria
-
     green "Hysteria 2 节点密码已成功修改为：$passwd"
     yellow "请手动更新客户端配置文件以使用节点"
     showconf
